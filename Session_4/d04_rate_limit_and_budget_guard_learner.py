@@ -26,9 +26,12 @@ def get_product_details_with_budget(
     simulate_rate_limit: bool = False,
 ) -> dict:
     """Fetch a product under a per-run call budget, with rate-limit handling."""
+    # Simple, predictable input metadata used for logging attempts
     input_data = {"product_id": product_id}
 
+    # 1) Budget check: block early if we've used our allowed calls for this run
     if not budget_guard.can_call("get_product_details_with_budget"):
+        # Log the blocked attempt and return a predictable error envelope
         log_tool_attempt(
             "get_product_details_with_budget", input_data, 1,
             "budget_exceeded", 0.0, error_type="budget_exceeded",
@@ -40,14 +43,19 @@ def get_product_details_with_budget(
             retryable=False,
             budget_remaining=budget_guard.remaining(),
         )
+    # 2) Record the call to consume one budget unit for this run
     budget_guard.record_call("get_product_details_with_budget")
 
+    # 3) Try the external call and handle a simulated rate-limit as a retryable error
     start = time.perf_counter()
     try:
+        # Optionally raise a simulated rate-limit to exercise error handling
         if simulate_rate_limit:
             trigger_failure("rate_limit")
+        # Normal path: fetch product data (canned or real API)
         raw = fetch_product(product_id)
     except SimulatedRateLimitError:
+        # Rate-limit: log timing and return a retryable error envelope
         latency = (time.perf_counter() - start) * 1000
         log_tool_attempt(
             "get_product_details_with_budget", input_data, 1, "error",
@@ -61,12 +69,14 @@ def get_product_details_with_budget(
             budget_remaining=budget_guard.remaining(),
         )
 
+    # 4) Normalize the raw product into the predictable tool-response payload
     normalized = {
         "product_id": raw.get("id"),
         "title": raw.get("title"),
         "category": raw.get("category"),
         "price": raw.get("price"),
     }
+    # 5) Log latency and return a success envelope including remaining budget
     latency = (time.perf_counter() - start) * 1000
     log_tool_attempt(
         "get_product_details_with_budget", input_data, 1, "success",
