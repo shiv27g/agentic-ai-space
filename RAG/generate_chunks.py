@@ -23,8 +23,8 @@ def generate_for(path, max_chunks=10, out_dir="RAG/outputs"):
 
 def main():
     docs = [
-        "RAG/test_documents/Bread_Annual_Report_2026.pdf",
-        "RAG/test_documents/Bread_Earnings_Call_Q1_2026.pdf",
+        "test_documents/Bread_Annual_Report_2026.pdf",
+        "test_documents/Bread_Earnings_Call_Q1_2026.pdf",
     ]
     outputs = []
     for d in docs:
